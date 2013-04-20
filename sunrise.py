@@ -2,6 +2,8 @@
 import math
 
 TAU = math.pi * 2
+DAYS_PER_YEAR = 365.25
+SOLSTICE_OFFSET = 10.5
 
 def rad_from_deg(degrees):
     return degrees / 360.0 * TAU
@@ -10,18 +12,18 @@ def deg_from_rad(radians):
 
 def year_angle(date):
     day_of_year = date.timetuple().tm_yday
-    return day_of_year / 365.25 * TAU
+    return day_of_year / DAYS_PER_YEAR * TAU
 
 def equation_of_time(date):
     # VERY crude approx
-    angle_corr = 10.5 / 365.25 * TAU # Solstice is not at jan 1, but dec 21
+    angle_corr = SOLSTICE_OFFSET / DAYS_PER_YEAR * TAU # Solstice is not at jan 1, but dec 21
     ya = year_angle(date) + angle_corr
     minutes = 8 * (math.sin(-ya) + math.sin(-ya * 2))
     return minutes / 60 / 24 * TAU
 
 def solar_declination(date):
     # VERY crude approx
-    angle_corr = 10.5 / 365.25 * TAU # Solstice is not at jan 1, but dec 21
+    angle_corr = SOLSTICE_OFFSET / DAYS_PER_YEAR * TAU # Solstice is not at jan 1, but dec 21
     ya = year_angle(date) + angle_corr
     return rad_from_deg(23.44) * math.sin(ya - TAU/4)
 
