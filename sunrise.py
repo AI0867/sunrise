@@ -1,9 +1,20 @@
 #!/usr/bin/python
+import collections
 import math
 
 TAU = math.pi * 2
 DAYS_PER_YEAR = 365.25
 SOLSTICE_OFFSET = 10.5
+
+lightness_limit = collections.namedtuple("lightness_limit", ["id", "angle", "nameup", "namedown", "description"])
+limits = [
+    lightness_limit("horizontal", 0, "horizontal sunrise", "horizontal sunset", "center of the true location of the sun on the horizon"),
+    lightness_limit("sunrise", 0.83, "sunrise", "sunset", "apparent sunset accounts for refraction and radius of the sun"),
+    lightness_limit("civil", 6, "civil dawn", "civil dusk", "sufficient light to work by"),
+    lightness_limit("naval", 12, "naval dawn", "naval dusk", "sufficient light to see the horizon"),
+    lightness_limit("astronomical", 18, "astronomical dawn", "astronomical dusk", "sufficient light to spoil astronomical observations")
+]
+limits = dict(zip(map(lambda x: x.id, limits), limits))
 
 def rad_from_deg(degrees):
     return degrees / 360.0 * TAU
@@ -47,6 +58,9 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Sunrise calculator using very crude approximations")
     ap.add_argument("-d", "--date", help="use given date/time rather than current time")
     ap.add_argument("-z", "--timezone", type=int, help="format times using given integer timezone (+03, -6)")
+    ap.add_argument("--limits", choices=limits.keys(),# + ["all"],
+                    default="sunrise",
+                    help="which lightness-level to calculate")
     ap.add_argument("--equation-of-time", action="store_true", help="use equation of time for minor corrections (up to ~15 minutes from normal)")
     ap.add_argument("latitude", type=float, help="latitude (degrees) of the sunrise location")
     ap.add_argument("longtitude", type=float, help="longtitude (degrees) of the sunrise location")
@@ -58,19 +72,19 @@ if __name__ == "__main__":
     else:
         import datetime
         dt = datetime.date.today()
-    print "Calculating sunrise for {0}".format(dt.isoformat())
+    limit = limits[args.limits]
+    print "Calculating {1} for {0}".format(dt.isoformat(), limit.nameup)
     lat_rad = rad_from_deg(args.latitude)
     lng_rad = rad_from_deg(args.longtitude)
     sun_decl = solar_declination(dt)
     if args.verbose > 0:
         print "Using sun decl {0} rad (= {1} degrees)".format(sun_decl, deg_from_rad(sun_decl))
-    sun_angle = -rad_from_deg(.83) # Refraction + sun size
+    if args.limits == "all":
+        raise NotImplementedError
+    sun_angle = -rad_from_deg(limit.angle)
     cos_of_hour = (math.sin(sun_angle) - math.sin(lat_rad) * math.sin(sun_decl)) / (math.cos(lat_rad) * math.cos(sun_decl))
     if args.verbose > 1:
         print "cos(hour): {0}".format(cos_of_hour)
-    if args.verbose > 2:
-        old_cos = -math.tan(lat_rad) * math.tan(sun_decl)
-        print "cos(hour) without sun-angle correction: {0}".format(old_cos)
     if args.verbose > 0 and args.equation_of_time:
         print_hour_angle(-equation_of_time(dt), "Equation of time: adjusting noon by {0}")
     elif args.verbose > 1:
@@ -90,16 +104,19 @@ if __name__ == "__main__":
             noon_utc = TAU/2 - lng_rad
         sunrise_utc = noon_utc - hour_angle
         sunset_utc = noon_utc + hour_angle
-        print_hour_angle(sunrise_local, "Sunrise\t{0} local solar time")
-        print_hour_angle(sunset_local, "Sunset\t{0} local solar time")
-        print_hour_angle(sunrise_utc, "Sunrise\t{0} UTC")
-        print_hour_angle(noon_utc, "Noon\t{0} UTC")
-        print_hour_angle(sunset_utc, "Sunset\t{0} UTC")
+        # These calculations are probably wrong
+        noon_tabs = "\t" * ((len(limit.nameup) - 7) / 8 + 2)
+        tabs = "\t" * ((len(limit.nameup) < 8) + 1)
+        print_hour_angle(sunrise_local, "{name}{tabs}{{}} local solar time".format(name=limit.nameup.capitalize(), tabs=tabs))
+        print_hour_angle(sunset_local, "{name}{tabs}{{}} local solar time".format(name=limit.namedown.capitalize(), tabs=tabs))
+        print_hour_angle(sunrise_utc, "{name}{tabs}{{}} UTC".format(name=limit.nameup.capitalize(), tabs=tabs))
+        print_hour_angle(noon_utc, "Noon{tabs}{{}} UTC".format(tabs=noon_tabs))
+        print_hour_angle(sunset_utc, "{name}{tabs}{{}} UTC".format(name=limit.namedown.capitalize(), tabs=tabs))
         if args.timezone != None:
             zone_corr = args.timezone / 24. * TAU
             sunrise_zone = sunrise_utc + zone_corr
             noon_zone = noon_utc + zone_corr
             sunset_zone = sunset_utc + zone_corr
-            print_hour_angle(sunrise_zone, "Sunrise\t{{}} {0:+03}".format(args.timezone))
-            print_hour_angle(noon_zone, "Noon\t{{}} {0:+03}".format(args.timezone))
-            print_hour_angle(sunset_zone, "Sunset\t{{}} {0:+03}".format(args.timezone))
+            print_hour_angle(sunrise_zone, "{name}{tabs}{{}} {tz:+03}".format(tz=args.timezone, name=limit.nameup.capitalize(), tabs=tabs))
+            print_hour_angle(noon_zone, "Noon{tabs}{{}} {tz:+03}".format(tz=args.timezone, tabs=noon_tabs))
+            print_hour_angle(sunset_zone, "{name}{tabs}{{}} {tz:+03}".format(tz=args.timezone, name=limit.namedown.capitalize(), tabs=tabs))
