@@ -109,8 +109,13 @@ if __name__ == "__main__":
     ap.add_argument("--equation-of-time", action="store_true", help="use equation of time for minor corrections (up to ~15 minutes from normal)")
     ap.add_argument("latitude", type=float, help="latitude (degrees) of the sunrise location")
     ap.add_argument("longtitude", type=float, help="longtitude (degrees) of the sunrise location")
+    ap.add_argument("--list-limits", action="store_true", help="list and describe the lightness-level limits")
     ap.add_argument("-v", "--verbose", action="count", default=0, help="be more verbose. Can be used multiple times")
     args = ap.parse_args()
+    if args.list_limits:
+        for limit in limits.values():
+            print "{id: <12} {description: <61} ({angle: >4} degrees below the horizon)".format(**limit.__dict__)
+        sys.exit(0)
     if args.date:
         import dateutil.parser
         dt = dateutil.parser.parse(args.date).date()
