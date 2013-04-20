@@ -14,7 +14,8 @@ def year_angle(date):
 
 def equation_of_time(date):
     # VERY crude approx
-    ya = year_angle(date)
+    angle_corr = 10.5 / 365.25 * TAU # Solstice is not at jan 1, but dec 21
+    ya = year_angle(date) + angle_corr
     minutes = 8 * (math.sin(-ya) + math.sin(-ya * 2))
     return minutes / 60 / 24 * TAU
 
