@@ -61,16 +61,17 @@ if __name__ == "__main__":
     sun_decl = solar_declination(dt)
     if args.verbose > 0:
         print "Using sun decl {0} rad (= {1} degrees)".format(sun_decl, deg_from_rad(sun_decl))
-    cos_of_hour = -math.tan(lat_rad) * math.tan(sun_decl)
+    sun_angle = -rad_from_deg(.83) # Refraction + sun size
+    cos_of_hour = (math.sin(sun_angle) - math.sin(lat_rad) * math.sin(sun_decl)) / (math.cos(lat_rad) * math.cos(sun_decl))
     if args.verbose > 1:
         print "cos(hour): {0}".format(cos_of_hour)
+    if args.verbose > 2:
+        old_cos = -math.tan(lat_rad) * math.tan(sun_decl)
+        print "cos(hour) without sun-angle correction: {0}".format(old_cos)
     if args.verbose > 0 and args.equation_of_time:
         print_hour_angle(-equation_of_time(dt), "Equation of time: adjusting noon by {0}")
     elif args.verbose > 1:
         print_hour_angle(-equation_of_time(dt), "Equation of time: would adjust noon by {0}")
-    sun_angle = rad_from_deg(.83) # Refraction + sun size
-    if args.verbose > 1:
-        print_hour_angle(sun_angle, "Adjusting sunrise by {0} to account for refraction and sun radius")
     print
     if cos_of_hour > 1.0:
         print "Polar night"
@@ -78,14 +79,14 @@ if __name__ == "__main__":
         print "Polar day"
     else:
         hour_angle = math.acos(cos_of_hour)
-        sunrise_local = TAU/2 - hour_angle - sun_angle
-        sunset_local = TAU/2 + hour_angle + sun_angle
+        sunrise_local = TAU/2 - hour_angle
+        sunset_local = TAU/2 + hour_angle
         if args.equation_of_time:
             noon_utc = TAU/2 - lng_rad - equation_of_time(dt)
         else:
             noon_utc = TAU/2 - lng_rad
-        sunrise_utc = noon_utc - hour_angle - sun_angle
-        sunset_utc = noon_utc + hour_angle + sun_angle
+        sunrise_utc = noon_utc - hour_angle
+        sunset_utc = noon_utc + hour_angle
         print_hour_angle(sunrise_local, "Sunrise\t{0} local solar time")
         print_hour_angle(sunset_local, "Sunset\t{0} local solar time")
         print_hour_angle(sunrise_utc, "Sunrise\t{0} UTC")
