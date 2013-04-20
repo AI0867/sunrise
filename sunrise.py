@@ -52,43 +52,19 @@ def print_hour_angle(angle, fmt="{0}"):
     formatted = "{0:02}:{1:02}:{2:02}".format(hours, minutes, int(seconds))
     print fmt.format(formatted)
 
-if __name__ == "__main__":
-    import sys
-    import argparse
-    ap = argparse.ArgumentParser(description="Sunrise calculator using very crude approximations")
-    ap.add_argument("-d", "--date", help="use given date/time rather than current time")
-    ap.add_argument("-z", "--timezone", type=int, help="format times using given integer timezone (+03, -6)")
-    ap.add_argument("--limits", choices=limits.keys(),# + ["all"],
-                    default="sunrise",
-                    help="which lightness-level to calculate")
-    ap.add_argument("--equation-of-time", action="store_true", help="use equation of time for minor corrections (up to ~15 minutes from normal)")
-    ap.add_argument("latitude", type=float, help="latitude (degrees) of the sunrise location")
-    ap.add_argument("longtitude", type=float, help="longtitude (degrees) of the sunrise location")
-    ap.add_argument("-v", "--verbose", action="count", default=0, help="be more verbose. Can be used multiple times")
-    args = ap.parse_args()
-    if args.date:
-        import dateutil.parser
-        dt = dateutil.parser.parse(args.date).date()
-    else:
-        import datetime
-        dt = datetime.date.today()
-    limit = limits[args.limits]
-    print "Calculating {1} for {0}".format(dt.isoformat(), limit.nameup)
-    lat_rad = rad_from_deg(args.latitude)
-    lng_rad = rad_from_deg(args.longtitude)
-    sun_decl = solar_declination(dt)
+def print_limits(date, limit, latitude, longtitude):
+    print "Calculating {1} limits for {0}".format(date.isoformat(), limit.id)
+    sun_decl = solar_declination(date)
     if args.verbose > 0:
         print "Using sun decl {0} rad (= {1} degrees)".format(sun_decl, deg_from_rad(sun_decl))
-    if args.limits == "all":
-        raise NotImplementedError
     sun_angle = -rad_from_deg(limit.angle)
-    cos_of_hour = (math.sin(sun_angle) - math.sin(lat_rad) * math.sin(sun_decl)) / (math.cos(lat_rad) * math.cos(sun_decl))
+    cos_of_hour = (math.sin(sun_angle) - math.sin(latitude) * math.sin(sun_decl)) / (math.cos(latitude) * math.cos(sun_decl))
     if args.verbose > 1:
         print "cos(hour): {0}".format(cos_of_hour)
     if args.verbose > 0 and args.equation_of_time:
-        print_hour_angle(-equation_of_time(dt), "Equation of time: adjusting noon by {0}")
+        print_hour_angle(-equation_of_time(date), "Equation of time: adjusting noon by {0}")
     elif args.verbose > 1:
-        print_hour_angle(-equation_of_time(dt), "Equation of time: would adjust noon by {0}")
+        print_hour_angle(-equation_of_time(date), "Equation of time: would adjust noon by {0}")
     print
     if cos_of_hour > 1.0:
         print "Polar night"
@@ -99,9 +75,9 @@ if __name__ == "__main__":
         sunrise_local = TAU/2 - hour_angle
         sunset_local = TAU/2 + hour_angle
         if args.equation_of_time:
-            noon_utc = TAU/2 - lng_rad - equation_of_time(dt)
+            noon_utc = TAU/2 - longtitude - equation_of_time(date)
         else:
-            noon_utc = TAU/2 - lng_rad
+            noon_utc = TAU/2 - longtitude
         sunrise_utc = noon_utc - hour_angle
         sunset_utc = noon_utc + hour_angle
         # These calculations are probably wrong
@@ -120,3 +96,30 @@ if __name__ == "__main__":
             print_hour_angle(sunrise_zone, "{name}{tabs}{{}} {tz:+03}".format(tz=args.timezone, name=limit.nameup.capitalize(), tabs=tabs))
             print_hour_angle(noon_zone, "Noon{tabs}{{}} {tz:+03}".format(tz=args.timezone, tabs=noon_tabs))
             print_hour_angle(sunset_zone, "{name}{tabs}{{}} {tz:+03}".format(tz=args.timezone, name=limit.namedown.capitalize(), tabs=tabs))
+
+if __name__ == "__main__":
+    import sys
+    import argparse
+    ap = argparse.ArgumentParser(description="Sunrise calculator using very crude approximations")
+    ap.add_argument("-d", "--date", help="use given date/time rather than current time")
+    ap.add_argument("-z", "--timezone", type=int, help="format times using given integer timezone (+03, -6)")
+    ap.add_argument("--limits", choices=limits.keys() + ["all"],
+                    default="sunrise",
+                    help="which lightness-level to calculate")
+    ap.add_argument("--equation-of-time", action="store_true", help="use equation of time for minor corrections (up to ~15 minutes from normal)")
+    ap.add_argument("latitude", type=float, help="latitude (degrees) of the sunrise location")
+    ap.add_argument("longtitude", type=float, help="longtitude (degrees) of the sunrise location")
+    ap.add_argument("-v", "--verbose", action="count", default=0, help="be more verbose. Can be used multiple times")
+    args = ap.parse_args()
+    if args.date:
+        import dateutil.parser
+        dt = dateutil.parser.parse(args.date).date()
+    else:
+        import datetime
+        dt = datetime.date.today()
+    if args.limits == "all":
+        for limit in limits.values():
+            print_limits(dt, limit, rad_from_deg(args.latitude), rad_from_deg(args.longtitude))
+            print
+    else:
+        print_limits(dt, limits[args.limits], rad_from_deg(args.latitude), rad_from_deg(args.longtitude))
