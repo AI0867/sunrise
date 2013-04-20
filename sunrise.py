@@ -17,8 +17,9 @@ def year_angle(date):
 def equation_of_time(date):
     # VERY crude approx
     angle_corr = SOLSTICE_OFFSET / DAYS_PER_YEAR * TAU # Solstice is not at jan 1, but dec 21
-    ya = year_angle(date) + angle_corr
-    minutes = 8 * (math.sin(-ya) + math.sin(-ya * 2))
+    ya = year_angle(date) # ellipse is fairly relative to the year
+    mod_ya = ya + angle_corr # angle is relative to solstice
+    minutes = 8.5 * (math.sin(-ya) + math.sin(-mod_ya * 2))
     return minutes / 60 / 24 * TAU
 
 def solar_declination(date):
