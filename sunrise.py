@@ -14,7 +14,7 @@ limits = [
     lightness_limit("naval", 12, "naval dawn", "naval dusk", "sufficient light to see the horizon"),
     lightness_limit("astronomical", 18, "astronomical dawn", "astronomical dusk", "sufficient light to spoil astronomical observations")
 ]
-limits = dict(zip(map(lambda x: x.id, limits), limits))
+limits = collections.OrderedDict(sorted(zip(map(lambda x: x.id, limits), limits), key=lambda k: k[1].angle))
 
 def rad_from_deg(degrees):
     return degrees / 360.0 * TAU
