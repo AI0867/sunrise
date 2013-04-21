@@ -81,8 +81,12 @@ def print_limits(date, limit, latitude, longtitude):
         print "Polar day"
     else:
         hour_angle = math.acos(cos_of_hour)
-        sunrise_local = TAU/2 - hour_angle
-        sunset_local = TAU/2 + hour_angle
+        noon_local = TAU/2
+        sunrise_local = noon_local - hour_angle
+        sunset_local = noon_local + hour_angle
+        noon_mean = TAU/2 - equation_of_time(date)
+        sunrise_mean = noon_mean - hour_angle
+        sunset_mean = noon_mean + hour_angle
         noon_utc = TAU/2 - longtitude - equation_of_time(date)
         sunrise_utc = noon_utc - hour_angle
         sunset_utc = noon_utc + hour_angle
@@ -91,6 +95,9 @@ def print_limits(date, limit, latitude, longtitude):
         tabs = "\t" * ((len(limit.nameup) < 8) + 1)
         print_hour_angle(sunrise_local, "{name}{tabs}{{}} local solar time".format(name=limit.nameup.capitalize(), tabs=tabs))
         print_hour_angle(sunset_local, "{name}{tabs}{{}} local solar time".format(name=limit.namedown.capitalize(), tabs=tabs))
+        print_hour_angle(sunrise_mean, "{name}{tabs}{{}} local mean solar time".format(name=limit.nameup.capitalize(), tabs=tabs))
+        print_hour_angle(noon_mean, "Noon{tabs}{{}} local mean solar time".format(tabs=noon_tabs))
+        print_hour_angle(sunset_mean, "{name}{tabs}{{}} local mean solar time".format(name=limit.namedown.capitalize(), tabs=tabs))
         print_hour_angle(sunrise_utc, "{name}{tabs}{{}} UTC".format(name=limit.nameup.capitalize(), tabs=tabs))
         print_hour_angle(noon_utc, "Noon{tabs}{{}} UTC".format(tabs=noon_tabs))
         print_hour_angle(sunset_utc, "{name}{tabs}{{}} UTC".format(name=limit.namedown.capitalize(), tabs=tabs))
