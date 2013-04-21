@@ -116,7 +116,7 @@ def print_limits(date, limit, latitude, longtitude):
 if __name__ == "__main__":
     import sys
     import argparse
-    ap = argparse.ArgumentParser(description="Sunrise calculator using very crude approximations")
+    ap = argparse.ArgumentParser(description="Sunrise calculator")
     ap.add_argument("-d", "--date", help="use given date/time rather than current time")
     ap.add_argument("-z", "--timezone", type=int, help="format times using given integer timezone (+03, -6)")
     ap.add_argument("--limits", choices=limits.keys() + ["all"],
