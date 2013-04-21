@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import collections
+import datetime
 import math
 
 TAU = math.pi * 2
@@ -34,10 +35,25 @@ def equation_of_time(date):
     return (c - round(c)) * TAU/2
 
 def solar_declination(date):
-    # VERY crude approx
-    angle_corr = SOLSTICE_OFFSET / DAYS_PER_YEAR * TAU # Solstice is not at jan 1, but dec 21
-    ya = year_angle(date) + angle_corr
-    return rad_from_deg(23.44) * math.sin(ya - TAU/4)
+    crude_jd = date.toordinal()
+    crude_y2k_jd = datetime.date(2000,01,01).toordinal()
+    d_since_y2k = crude_jd - crude_y2k_jd
+    earth_anomalies = (rad_from_deg(357.5291), rad_from_deg(0.98560028))
+    m = earth_anomalies[0] + earth_anomalies[1] * d_since_y2k
+    m %= TAU
+    earth_centers = (rad_from_deg(1.9148), rad_from_deg(0.02), rad_from_deg(0.0003))
+    c = earth_centers[0] * math.sin(m) + earth_centers[1] * math.sin(m*2) + earth_centers[2] * math.sin(m*3)
+    v = m + c
+    earth_peri = rad_from_deg(102.9372)
+    earth_obliq = rad_from_deg(23.45)
+    l = v + earth_peri
+    l_sun = l + TAU/2
+    l_sun %= TAU
+    earth_a = (rad_from_deg(-2.4680), rad_from_deg(0.0530), rad_from_deg(-0.0014))
+    earth_d = (rad_from_deg(22.8008), rad_from_deg(0.5999), rad_from_deg(0.0493))
+    a_sun = l_sun + earth_a[0] * math.sin(2 * l_sun) + earth_a[1] * math.sin(4 * l_sun) + earth_a[2] * math.sin(6 * l_sun)
+    d_sun = earth_d[0] * math.sin(l_sun) + earth_d[1] * math.sin(l_sun)**3 + earth_d[2] * math.sin(l_sun)**5
+    return d_sun
 
 def time_angle_to_hms(time_angle):
     day_frac = time_angle/TAU
@@ -120,7 +136,6 @@ if __name__ == "__main__":
         import dateutil.parser
         dt = dateutil.parser.parse(args.date).date()
     else:
-        import datetime
         dt = datetime.date.today()
     if args.limits == "all":
         for limit in limits.values():
