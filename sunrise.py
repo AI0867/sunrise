@@ -5,7 +5,6 @@ import math
 
 TAU = math.pi * 2
 DAYS_PER_YEAR = 365.25
-SOLSTICE_OFFSET = 10.5
 
 lightness_limit = collections.namedtuple("lightness_limit", ["id", "angle", "nameup", "namedown", "description"])
 limits = [
@@ -21,10 +20,6 @@ def rad_from_deg(degrees):
     return degrees / 360.0 * TAU
 def deg_from_rad(radians):
     return radians / TAU * 360
-
-def year_angle(date):
-    day_of_year = date.timetuple().tm_yday
-    return day_of_year / DAYS_PER_YEAR * TAU
 
 def equation_of_time(date):
     w = TAU / DAYS_PER_YEAR
