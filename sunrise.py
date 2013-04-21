@@ -77,10 +77,8 @@ def print_limits(date, limit, latitude, longtitude):
     cos_of_hour = (math.sin(sun_angle) - math.sin(latitude) * math.sin(sun_decl)) / (math.cos(latitude) * math.cos(sun_decl))
     if args.verbose > 1:
         print "cos(hour): {0}".format(cos_of_hour)
-    if args.verbose > 0 and args.equation_of_time:
+    if args.verbose > 0:
         print_hour_angle(-equation_of_time(date), "Equation of time: adjusting noon by {0}")
-    elif args.verbose > 1:
-        print_hour_angle(-equation_of_time(date), "Equation of time: would adjust noon by {0}")
     print
     if cos_of_hour > 1.0:
         print "Polar night"
@@ -90,10 +88,7 @@ def print_limits(date, limit, latitude, longtitude):
         hour_angle = math.acos(cos_of_hour)
         sunrise_local = TAU/2 - hour_angle
         sunset_local = TAU/2 + hour_angle
-        if args.equation_of_time:
-            noon_utc = TAU/2 - longtitude - equation_of_time(date)
-        else:
-            noon_utc = TAU/2 - longtitude
+        noon_utc = TAU/2 - longtitude - equation_of_time(date)
         sunrise_utc = noon_utc - hour_angle
         sunset_utc = noon_utc + hour_angle
         # These calculations are probably wrong
@@ -122,7 +117,6 @@ if __name__ == "__main__":
     ap.add_argument("--limits", choices=limits.keys() + ["all"],
                     default="sunrise",
                     help="which lightness-level to calculate")
-    ap.add_argument("--equation-of-time", action="store_true", help="use equation of time for minor corrections (up to ~15 minutes from normal)")
     ap.add_argument("latitude", type=float, help="latitude (degrees) of the sunrise location")
     ap.add_argument("longtitude", type=float, help="longtitude (degrees) of the sunrise location")
     ap.add_argument("--list-limits", action="store_true", help="list and describe the lightness-level limits")
