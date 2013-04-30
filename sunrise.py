@@ -63,16 +63,18 @@ def print_hour_angle(angle, fmt="{0}"):
     formatted = "{0:02}:{1:02}:{2:02}".format(hours, minutes, int(seconds))
     print fmt.format(formatted)
 
-def print_limits(date, limit, latitude, longtitude):
+def print_limits(date, limit, latitude, longtitude, times=None, verbose=0):
+    if not times:
+        times = {"utc":None}
     print "Calculating {1} limits for {0}".format(date.isoformat(), limit.id)
     sun_decl = solar_declination(date)
-    if args.verbose > 0:
+    if verbose > 0:
         print "Using sun decl {0} rad (= {1} degrees)".format(sun_decl, deg_from_rad(sun_decl))
     sun_angle = -rad_from_deg(limit.angle)
     cos_of_hour = (math.sin(sun_angle) - math.sin(latitude) * math.sin(sun_decl)) / (math.cos(latitude) * math.cos(sun_decl))
-    if args.verbose > 1:
+    if verbose > 1:
         print "cos(hour): {0}".format(cos_of_hour)
-    if args.verbose > 0:
+    if verbose > 0:
         print_hour_angle(-equation_of_time(date), "Equation of time: adjusting noon by {0}")
     print
     if cos_of_hour > 1.0:
@@ -82,40 +84,38 @@ def print_limits(date, limit, latitude, longtitude):
     else:
         hour_angle = math.acos(cos_of_hour)
         noon_local = TAU/2
-        sunrise_local = noon_local - hour_angle
-        sunset_local = noon_local + hour_angle
         noon_mean = TAU/2 - equation_of_time(date)
-        sunrise_mean = noon_mean - hour_angle
-        sunset_mean = noon_mean + hour_angle
         noon_utc = TAU/2 - longtitude - equation_of_time(date)
-        sunrise_utc = noon_utc - hour_angle
-        sunset_utc = noon_utc + hour_angle
+
         # These calculations are probably wrong
         noon_tabs = "\t" * ((len(limit.nameup) - 7) / 8 + 2)
         tabs = "\t" * ((len(limit.nameup) < 8) + 1)
-        print_hour_angle(sunrise_local, "{name}{tabs}{{}} local solar time".format(name=limit.nameup.capitalize(), tabs=tabs))
-        print_hour_angle(sunset_local, "{name}{tabs}{{}} local solar time".format(name=limit.namedown.capitalize(), tabs=tabs))
-        print_hour_angle(sunrise_mean, "{name}{tabs}{{}} local mean solar time".format(name=limit.nameup.capitalize(), tabs=tabs))
-        print_hour_angle(noon_mean, "Noon{tabs}{{}} local mean solar time".format(tabs=noon_tabs))
-        print_hour_angle(sunset_mean, "{name}{tabs}{{}} local mean solar time".format(name=limit.namedown.capitalize(), tabs=tabs))
-        print_hour_angle(sunrise_utc, "{name}{tabs}{{}} UTC".format(name=limit.nameup.capitalize(), tabs=tabs))
-        print_hour_angle(noon_utc, "Noon{tabs}{{}} UTC".format(tabs=noon_tabs))
-        print_hour_angle(sunset_utc, "{name}{tabs}{{}} UTC".format(name=limit.namedown.capitalize(), tabs=tabs))
-        if args.timezone != None:
-            zone_corr = args.timezone / 24. * TAU
-            sunrise_zone = sunrise_utc + zone_corr
-            noon_zone = noon_utc + zone_corr
-            sunset_zone = sunset_utc + zone_corr
-            print_hour_angle(sunrise_zone, "{name}{tabs}{{}} {tz:+03}".format(tz=args.timezone, name=limit.nameup.capitalize(), tabs=tabs))
-            print_hour_angle(noon_zone, "Noon{tabs}{{}} {tz:+03}".format(tz=args.timezone, tabs=noon_tabs))
-            print_hour_angle(sunset_zone, "{name}{tabs}{{}} {tz:+03}".format(tz=args.timezone, name=limit.namedown.capitalize(), tabs=tabs))
+        for (timeformat, val) in times.items():
+            if timeformat == "solar":
+                values = (noon_local, "solar time")
+            elif timeformat == "mean":
+                values = (noon_mean, "mean solar time")
+            elif timeformat == "utc":
+                values = (noon_utc, "UTC")
+            elif timeformat == "zone":
+                zone_corr = val / 24. * TAU
+                noon_zone = noon_utc + zone_corr
+                values = (noon_zone, "{tz:+03}".format(tz=val))
+            sunrise = values[0] - hour_angle
+            sunset = values[0] + hour_angle
+            print_hour_angle(sunrise, "{limitname}{tabs}{{}} {timename}".format(limitname=limit.nameup.capitalize(), timename=values[1], tabs=tabs))
+            print_hour_angle(values[0], "Noon{tabs}{{}} {timename}".format(tabs=noon_tabs, timename=values[1]))
+            print_hour_angle(sunset, "{limitname}{tabs}{{}} {timename}".format(limitname=limit.namedown.capitalize(), timename=values[1], tabs=tabs))
 
 if __name__ == "__main__":
     import sys
     import argparse
     ap = argparse.ArgumentParser(description="Sunrise calculator")
     ap.add_argument("-d", "--date", help="use given date/time rather than current time")
-    ap.add_argument("-z", "--timezone", type=int, help="format times using given integer timezone (+03, -6)")
+    ap.add_argument("-s", "--solar", action="store_true", help="show time in solar time")
+    ap.add_argument("-m", "--mean", action="store_true", help="show time in mean solar time")
+    ap.add_argument("-u", "--utc", action="store_true", help="show time in UTC")
+    ap.add_argument("-z", "--zone", type=int, help="show times in given integer timezone (+03, -6)")
     ap.add_argument("--limits", choices=limits.keys() + ["all"],
                     default="sunrise",
                     help="which lightness-level to calculate")
@@ -124,6 +124,17 @@ if __name__ == "__main__":
     ap.add_argument("--list-limits", action="store_true", help="list and describe the lightness-level limits")
     ap.add_argument("-v", "--verbose", action="count", default=0, help="be more verbose. Can be used multiple times")
     args = ap.parse_args()
+
+    times = collections.OrderedDict()
+    if args.solar:
+        times["solar"] = None
+    if args.mean:
+        times["mean"] = None
+    if args.utc:
+        times["utc"] = None
+    if args.zone != None:
+        times["zone"] = args.zone
+
     if args.list_limits:
         for limit in limits.values():
             print "{id: <12} {description: <61} ({angle: >4} degrees below the horizon)".format(**limit.__dict__)
@@ -135,7 +146,7 @@ if __name__ == "__main__":
         dt = datetime.date.today()
     if args.limits == "all":
         for limit in limits.values():
-            print_limits(dt, limit, rad_from_deg(args.latitude), rad_from_deg(args.longtitude))
+            print_limits(dt, limit, rad_from_deg(args.latitude), rad_from_deg(args.longtitude), times=times, verbose=args.verbose)
             print
     else:
-        print_limits(dt, limits[args.limits], rad_from_deg(args.latitude), rad_from_deg(args.longtitude))
+        print_limits(dt, limits[args.limits], rad_from_deg(args.latitude), rad_from_deg(args.longtitude), times=times, verbose=args.verbose)
