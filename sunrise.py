@@ -111,7 +111,7 @@ if __name__ == "__main__":
     import sys
     import argparse
     ap = argparse.ArgumentParser(description="Sunrise calculator")
-    ap.add_argument("-d", "--date", help="use given date/time rather than current time")
+    ap.add_argument("-d", "--date", help="use given date rather than current time")
     ap.add_argument("-s", "--solar", action="store_true", help="show time in solar time")
     ap.add_argument("-m", "--mean", action="store_true", help="show time in mean solar time")
     ap.add_argument("-u", "--utc", action="store_true", help="show time in UTC")
@@ -140,8 +140,12 @@ if __name__ == "__main__":
             print "{id: <12} {description: <61} ({angle: >4} degrees below the horizon)".format(**limit.__dict__)
         sys.exit(0)
     if args.date:
-        import dateutil.parser
-        dt = dateutil.parser.parse(args.date).date()
+        try:
+            import dateutil.parser
+            dt = dateutil.parser.parse(args.date).date()
+        except ImportError:
+            print "To parse dates, install python-dateutil"
+            sys.exit(1)
     else:
         dt = datetime.date.today()
     if args.limits == "all":
