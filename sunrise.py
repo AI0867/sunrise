@@ -31,7 +31,7 @@ def equation_of_time(date):
 
 def solar_declination(date):
     crude_jd = date.toordinal()
-    crude_y2k_jd = datetime.date(2000,01,01).toordinal()
+    crude_y2k_jd = datetime.date(2000,1,1).toordinal()
     d_since_y2k = crude_jd - crude_y2k_jd
     earth_anomalies = (rad_from_deg(357.5291), rad_from_deg(0.98560028))
     m = earth_anomalies[0] + earth_anomalies[1] * d_since_y2k
@@ -61,26 +61,26 @@ def time_angle_to_hms(time_angle):
 def print_hour_angle(angle, fmt="{0}"):
     (hours, minutes, seconds) = time_angle_to_hms(angle)
     formatted = "{0:02}:{1:02}:{2:02}".format(hours, minutes, int(seconds))
-    print fmt.format(formatted)
+    print(fmt.format(formatted))
 
 def print_limits(date, limit, latitude, longtitude, times=None, verbose=0):
     if not times:
         times = {"utc":None}
-    print "Calculating {1} limits for {0}".format(date.isoformat(), limit.id)
+    print("Calculating {1} limits for {0}".format(date.isoformat(), limit.id))
     sun_decl = solar_declination(date)
     if verbose > 0:
-        print "Using sun decl {0} rad (= {1} degrees)".format(sun_decl, deg_from_rad(sun_decl))
+        print("Using sun decl {0} rad (= {1} degrees)".format(sun_decl, deg_from_rad(sun_decl)))
     sun_angle = -rad_from_deg(limit.angle)
     cos_of_hour = (math.sin(sun_angle) - math.sin(latitude) * math.sin(sun_decl)) / (math.cos(latitude) * math.cos(sun_decl))
     if verbose > 1:
-        print "cos(hour): {0}".format(cos_of_hour)
+        print("cos(hour): {0}".format(cos_of_hour))
     if verbose > 0:
         print_hour_angle(-equation_of_time(date), "Equation of time: adjusting noon by {0}")
     print
     if cos_of_hour > 1.0:
-        print "Polar night"
+        print("Polar night")
     elif cos_of_hour < -1.0:
-        print "Polar day"
+        print("Polar day")
     else:
         hour_angle = math.acos(cos_of_hour)
         noon_local = TAU/2
@@ -88,7 +88,7 @@ def print_limits(date, limit, latitude, longtitude, times=None, verbose=0):
         noon_utc = TAU/2 - longtitude - equation_of_time(date)
 
         # These calculations are probably wrong
-        noon_tabs = "\t" * ((len(limit.nameup) - 7) / 8 + 2)
+        noon_tabs = "\t" * ((len(limit.nameup) - 7) // 8 + 2)
         tabs = "\t" * ((len(limit.nameup) < 8) + 1)
         for (timeformat, val) in times.items():
             if timeformat == "solar":
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     ap.add_argument("-m", "--mean", action="store_true", help="show time in mean solar time")
     ap.add_argument("-u", "--utc", action="store_true", help="show time in UTC")
     ap.add_argument("-z", "--zone", type=int, help="show times in given integer timezone (+03, -6)")
-    ap.add_argument("--limits", choices=limits.keys() + ["all"],
+    ap.add_argument("--limits", choices=limits.keys() | {"all"},
                     default="sunrise",
                     help="which lightness-level to calculate")
     ap.add_argument("latitude", type=float, help="latitude (degrees) of the sunrise location")
@@ -137,20 +137,20 @@ if __name__ == "__main__":
 
     if args.list_limits:
         for limit in limits.values():
-            print "{id: <12} {description: <61} ({angle: >4} degrees below the horizon)".format(**limit.__dict__)
+            print("{id: <12} {description: <61} ({angle: >4} degrees below the horizon)".format(**limit._asdict()))
         sys.exit(0)
     if args.date:
         try:
             import dateutil.parser
             dt = dateutil.parser.parse(args.date).date()
         except ImportError:
-            print "To parse dates, install python-dateutil"
+            print("To parse dates, install python-dateutil")
             sys.exit(1)
     else:
         dt = datetime.date.today()
     if args.limits == "all":
         for limit in limits.values():
             print_limits(dt, limit, rad_from_deg(args.latitude), rad_from_deg(args.longtitude), times=times, verbose=args.verbose)
-            print
+            print()
     else:
         print_limits(dt, limits[args.limits], rad_from_deg(args.latitude), rad_from_deg(args.longtitude), times=times, verbose=args.verbose)
